@@ -7,18 +7,15 @@
 ## Reference
 
 > [!IMPORTANT]
-> Újvári, G., Bajnai, D., Kelson, J., Bógalo, M. F., Bradák-Hayashi, B., Payros, A., Pesnin, M., & Kele, S. (n.d.). Convergent magnetic, geochemical and triple oxygen evidence for increased soil moisture during the PETM, southern Pyrenees. Under review.
+> Újvári, G., Bajnai, D., Kelson, J., Bógalo, M. F., Bradák-Hayashi, B., Payros, A., Pesnin, M., & Kele, S. (under review). Convergent magnetic, geochemical and triple oxygen evidence for increased soil moisture during the PETM, southern Pyrenees.
 
 ## Codes
 
 - [scale_data.py](codes/scale_data.py) scales and averages the carbonate triple oxygen isotope measurements. Input: [replicate_data.csv](data/input/replicate_data.csv). Output: [replicate_data_scaled.csv](data/output/csv/replicate_data_scaled.csv), [replicate_data_scaled.xlsx](data/output/xlsx/replicate_data_scaled.xlsx), [replicate_data_scaled_averaged.csv](data/output/csv/replicate_data_scaled_averaged.csv), [replicate_data_scaled_averaged.xlsx](data/output/xlsx/replicate_data_scaled_averaged.xlsx), [replicates_a.png](figures/png/replicates_a.png), [replicates_b.png](figures/png/replicates_b.png), and [replicates_d-e.png](figures/png/replicates_d-e.png).
-- [plot_data_per_sample.py](codes/plot_data_per_sample.py) reconstructs soil-water isotope compositions for individual carbonate samples. Input: [replicate_data_scaled_averaged.csv](data/output/csv/replicate_data_scaled_averaged.csv), [sample_info.csv](data/input/sample_info.csv), and [Aron_2021.csv](data/input/water_data/Aron_2021.csv). Output: [all_data.csv](data/output/csv/all_data.csv), [all_data.xlsx](data/output/xlsx/all_data.xlsx), [reconstructed_soil_water.csv](data/output/csv/reconstructed_soil_water.csv), [carbonates_per_sample.png](figures/png/carbonates_per_sample.png), and [d18O_AC_vs_d18O.png](figures/png/d18O_AC_vs_d18O.png).
 - [plot_data_averaged_water.py](codes/plot_data_averaged_water.py) summarizes reconstructed soil-water isotope compositions before and during the PETM. Input: [replicate_data_scaled_averaged.csv](data/output/csv/replicate_data_scaled_averaged.csv), [sample_info.csv](data/input/sample_info.csv), [Aron_2021.csv](data/input/water_data/Aron_2021.csv), [Kelson_2026_meteoric_water.csv](data/input/water_data/Kelson_2026_meteoric_water.csv), and [Kelson_2026_soil_water.csv](data/input/water_data/Kelson_2026_soil_water.csv). Output: [reconstructed_water_averaged.csv](data/output/csv/reconstructed_water_averaged.csv), [reconstructed_water_averaged.xlsx](data/output/xlsx/reconstructed_water_averaged.xlsx), [reconstructed_soil_water.csv](data/output/csv/reconstructed_soil_water.csv), [table_S4.xlsx](data/output/xlsx/table_S4.xlsx), and [carbonates_averaged_water.png](figures/png/carbonates_averaged_water.png).
 - [reconstruct_water_Dp17O.py](codes/reconstruct_water_Dp17O.py) reconstructs water Δ’<sup>17</sup>O from carbonate isotope compositions and temperature. Input: carbonate δ<sup>18</sup>O, Δ’<sup>17</sup>O, and temperature values. Output: reconstructed water Δ’<sup>17</sup>O values.
 - [_helper_functions.py](codes/_helper_functions.py) provides shared isotope calculations and table export.
 - [_plot_style.py](codes/_plot_style.py) provides shared figure styling and export.
-
-The outputs [all_data.csv](data/output/csv/all_data.csv), [all_data.xlsx](data/output/xlsx/all_data.xlsx), [carbonates_per_sample.png](figures/png/carbonates_per_sample.png), and [d18O_AC_vs_d18O.png](figures/png/d18O_AC_vs_d18O.png) are not currently included; their links identify the expected output locations.
 
 SVG versions of all included figures are available in the [SVG folder](figures/svg/).
 
@@ -27,17 +24,14 @@ SVG versions of all included figures are available in the [SVG folder](figures/s
 ### Input data files
 
 - [replicate_data.csv](data/input/replicate_data.csv) contains raw triple oxygen isotope measurements of Esplugafreda carbonates and reference materials. It is used by [scale_data.py](codes/scale_data.py).
-- [sample_info.csv](data/input/sample_info.csv) contains carbonate δ<sup>18</sup>O measurements and clumped isotopes temperature estimates from Esplugafreda across the PETM. It is used by [plot_data_per_sample.py](codes/plot_data_per_sample.py) and [plot_data_averaged_water.py](codes/plot_data_averaged_water.py).
+- [sample_info.csv](data/input/sample_info.csv) contains carbonate δ<sup>18</sup>O measurements and clumped isotopes temperature estimates from Esplugafreda across the PETM. It is used by [plot_data_averaged_water.py](codes/plot_data_averaged_water.py).
 
 ### Exported data files
 
 - [replicate_data_scaled.csv](data/output/csv/replicate_data_scaled.csv) contains scaled replicate triple oxygen isotope measurements of Esplugafreda carbonates. It is exported by [scale_data.py](codes/scale_data.py).
-- [replicate_data_scaled_averaged.csv](data/output/csv/replicate_data_scaled_averaged.csv) contains sample-average triple oxygen isotope compositions of Esplugafreda carbonates. It is exported by [scale_data.py](codes/scale_data.py) and used by [plot_data_per_sample.py](codes/plot_data_per_sample.py) and [plot_data_averaged_water.py](codes/plot_data_averaged_water.py).
-- [all_data.csv](data/output/csv/all_data.csv) combines carbonate isotope compositions, clumped isotopes temperature estimates, and individual soil-water reconstructions from Esplugafreda. It is exported by [plot_data_per_sample.py](codes/plot_data_per_sample.py) and is not currently included in the repository.
-- [reconstructed_soil_water.csv](data/output/csv/reconstructed_soil_water.csv) contains individual soil-water isotope reconstructions from Esplugafreda before and during the PETM. It is exported by [plot_data_per_sample.py](codes/plot_data_per_sample.py) and [plot_data_averaged_water.py](codes/plot_data_averaged_water.py).
+- [replicate_data_scaled_averaged.csv](data/output/csv/replicate_data_scaled_averaged.csv) contains sample-average triple oxygen isotope compositions of Esplugafreda carbonates. It is exported by [scale_data.py](codes/scale_data.py) and used by [plot_data_averaged_water.py](codes/plot_data_averaged_water.py).
+- [reconstructed_soil_water.csv](data/output/csv/reconstructed_soil_water.csv) contains individual soil-water isotope reconstructions from Esplugafreda before and during the PETM. It is exported by [plot_data_averaged_water.py](codes/plot_data_averaged_water.py).
 - [reconstructed_water_averaged.csv](data/output/csv/reconstructed_water_averaged.csv) contains period-average reconstructed soil-water isotope compositions from Esplugafreda before and during the PETM. It is exported by [plot_data_averaged_water.py](codes/plot_data_averaged_water.py).
-
-The data underlying the unavailable [all_data.csv](data/output/csv/all_data.csv) can be accessed in [replicate_data_scaled_averaged.csv](data/output/csv/replicate_data_scaled_averaged.csv) and [reconstructed_soil_water.csv](data/output/csv/reconstructed_soil_water.csv).
 
 ### Literature data used in the scripts
 

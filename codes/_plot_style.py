@@ -20,6 +20,10 @@ STYLE = {
     "savefig.bbox": "tight",
     "mathtext.default": "regular",
     "figure.figsize": (3.5, 3.5),
+    "lines.markeredgewidth": 0.5,
+    "lines.linewidth": 1,
+    "patch.linewidth": 0.5,
+    "grid.linewidth": 0.2,
 }
 
 C = {
@@ -55,6 +59,12 @@ C = {
     "yellow6": "#FFBB00",
     "yellow7": "#FF9B00",
     "yellow8": "#FF7A00",
+
+    # Colors sampled from the reference carbonate and water figure.
+    "pre_petm": "#4A6D8C",
+    "cie_body": "#D4A017",
+    "modern_meteoric": "#C3CCD4",
+    "modern_soil": "#EBB0B0",
 
     "gray": "#7D7D7D",
     "black": "#000000",

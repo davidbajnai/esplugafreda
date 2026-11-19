@@ -60,38 +60,71 @@ def a18_cc(T):
     # return np.exp(B_calcite) / np.exp(B_water)
 
 
-def theta_cc(T):
+def theta_cc(temperature_k: float | np.ndarray, model: str = "GuoZhou") -> float | np.ndarray:
+    """Return calcite/water theta for the selected model at temperature in kelvin."""
+    temperature_k = np.asarray(temperature_k)
+    if model == "GuoZhou":
+        # Guo and Zhou (2019) - calcite
+        return 59.1047 / temperature_k**2 - 1.4089 / temperature_k + 0.5297
+    if model == "Hayles":
+        # Hayles et al. (2018) - calcite; retain the existing coefficients.
+        k_calcite = (
+            1.019124E+09 / temperature_k**5
+            + -2.117501E+07 / temperature_k**4
+            + 1.686453E+05 / temperature_k**3
+            + -5.784679E+02 / temperature_k**2
+            + 1.489666E-01 / temperature_k
+            + 0.5304852
+        )
+        b_calcite = (
+            7.027321E+14 / temperature_k**7
+            + -1.633009E+13 / temperature_k**6
+            + 1.463936E+11 / temperature_k**5
+            + -5.417531E+08 / temperature_k**4
+            + -4.495755E+05 / temperature_k**3
+            + 1.307870E+04 / temperature_k**2
+            + -5.393675E-01 / temperature_k
+            + 1.331245E-04
+        )
+        k_water = (
+            7.625734E+06 / temperature_k**5
+            + 1.216102E+06 / temperature_k**4
+            + -2.135774E+04 / temperature_k**3
+            + 1.323782E+02 / temperature_k**2
+            + -4.931630E-01 / temperature_k
+            + 0.5306551
+        )
+        b_water = (
+            -6.705843E+15 / temperature_k**7
+            + 1.333519E+14 / temperature_k**6
+            + -1.114055E+12 / temperature_k**5
+            + 5.090782E+09 / temperature_k**4
+            + -1.353889E+07 / temperature_k**3
+            + 2.143196E+04 / temperature_k**2
+            + 5.689300 / temperature_k
+            + -7.839005E-03
+        )
+        # This internal ratio belongs to the Hayles theta expression only.
+        # The selected theta is still paired with the existing a18_cc function.
+        a18 = np.exp(b_calcite) / np.exp(b_water)
+        return k_calcite + (k_calcite-k_water) * (b_water / np.log(a18))
+    raise ValueError("model must be 'GuoZhou' or 'Hayles'.")
 
-    # Wostbrock et al. (2020) - aragonite
-    # return -1.53 / T + 0.5305
 
-    # Alternative equations:
-
-    # Wostbrock et al. (2020) - calcite
-    # return -1.39 / T + 0.5305
-
-    # Guo and Zhou (2019) – aragonite
-    # return 59.1047/T**2 + -1.4089/T + 0.5297
-
-    # Hayles et al. (2018) - calcite
-    K_calcite = 1.019124E+09 / T**5 + -2.117501E+07 / T**4 + 1.686453E+05 / T**3 + -5.784679E+02 / T**2 + 1.489666E-01 / T + 0.5304852
-    B_calcite = 7.027321E+14 / T**7 + -1.633009E+13 / T**6 + 1.463936E+11 / T**5 + -5.417531E+08 / T**4 + -4.495755E+05 / T**3  + 1.307870E+04 / T**2 + -5.393675E-01 / T + 1.331245E-04
-    K_water = 7.625734E+06 / T**5 + 1.216102E+06 / T**4 + -2.135774E+04 / T**3 + 1.323782E+02 / T**2 + -4.931630E-01 / T + 0.5306551
-    B_water = -6.705843E+15 / T**7 + 1.333519E+14 / T**6 + -1.114055E+12 / T**5 + 5.090782E+09 / T**4 + -1.353889E+07 / T**3 + 2.143196E+04 / T**2 + 5.689300 / T + -7.839005E-03
-    a18 = np.exp(B_calcite) / np.exp(B_water)
-    return K_calcite + (K_calcite-K_water) * (B_water / np.log(a18))
-
-
-def a17_cc(T):
-    return a18_cc(T)**theta_cc(T)
+def a17_cc(temperature_k: float | np.ndarray, model: str = "GuoZhou") -> float | np.ndarray:
+    return a18_cc(temperature_k)**theta_cc(temperature_k, model)
 
 
 def d18O_cc(equilibrium_temperatures, d18Ow):
     return a18_cc(equilibrium_temperatures) * (d18Ow+1000) - 1000
 
 
-def d17O_cc(equilibrium_temperatures, d18Ow):
-    return a17_cc(equilibrium_temperatures) * (d18Ow+1000) - 1000
+def d17O_cc(
+    equilibrium_temperatures: float | np.ndarray,
+    water_d17o: float | np.ndarray,
+    model: str = "GuoZhou",
+) -> float | np.ndarray:
+    return a17_cc(equilibrium_temperatures, model) * (water_d17o + 1000) - 1000
 
 
 
@@ -113,7 +146,7 @@ def applyAFF(d18O_CO2, d17O_CO2, mineral, temperature_C):
         a18_25 = 1.010596
         a18_90 = 1.008541
         a18_70 = 1.00909
-    
+
     elif mineral == "dolomite":
         # Rosenbaum and Sheppard (1986)
         a18_90 = np.exp((6.65*10**5*(1/(90+273.15)**2)+4.23)/1000)
@@ -140,7 +173,7 @@ def applyAFF(d18O_CO2, d17O_CO2, mineral, temperature_C):
 
     return d18O_AC, d17O_AC, Dp17O_AC
 
-    
+
 def confidence_ellipse(x, y, ax, n_std=3, **kwargs):
     """
     Create a plot of the covariance confidence ellipse of *x* and *y*.

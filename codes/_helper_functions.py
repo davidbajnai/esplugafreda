@@ -66,6 +66,8 @@ def theta_cc(temperature_k: float | np.ndarray, model: str = "GuoZhou") -> float
     if model == "GuoZhou":
         # Guo and Zhou (2019) - calcite
         return 59.1047 / temperature_k**2 - 1.4089 / temperature_k + 0.5297
+    if model == "Wostbrock":
+        return -1.39 / temperature_k + 0.5305  
     if model == "Hayles":
         # Hayles et al. (2018) - calcite; retain the existing coefficients.
         k_calcite = (

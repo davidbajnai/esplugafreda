@@ -56,14 +56,23 @@ def scaleData(df):
         NBS18_d18O_measured = group[group["SampleName"].str.contains("NBS18")]["d18O"].mean()
         NBS18_d17O_measured = group[group["SampleName"].str.contains("NBS18")]["d17O"].mean()
 
-        # Accepted CO2 values
+        # Accepted CO2 values - based on Chaillot et al. (2025); used in the paper
         IAEA603_d18O_accepted = 36.855 # CO2 from 90°C acid digestion of -2.37 VPDB
-        IAEA603_Dp17O_accepted = -127.3 # From Chaillot et al. (2025)
+        IAEA603_Dp17O_accepted = -127.3
         IAEA603_d17O_accepted = d17O(IAEA603_d18O_accepted, IAEA603_Dp17O_accepted)
 
         NBS18_d18O_accepted = 15.40298 # CO2 from 90°C acid digestion of -23.01 VPDB
-        NBS18_Dp17O_accepted = -101.3 # From Chaillot et al. (2025)
+        NBS18_Dp17O_accepted = -101.3
         NBS18_d17O_accepted = d17O(NBS18_d18O_accepted, NBS18_Dp17O_accepted)
+
+        # Accepted CO2 values - alternate values from Wostbrock et al. (2020)
+        # IAEA603_d18O_accepted = 36.855 # CO2 from 90°C acid digestion of -2.37 VPDB
+        # IAEA603_Dp17O_accepted = -147+4.1 # corrected for 90°C acid digestion
+        # IAEA603_d17O_accepted = d17O(IAEA603_d18O_accepted, IAEA603_Dp17O_accepted)
+        
+        # NBS18_d18O_accepted = 15.40298 # CO2 from 90°C acid digestion of -23.01 VPDB
+        # NBS18_Dp17O_accepted = -100+4.1 # corrected for 90°C acid digestion
+        # NBS18_d17O_accepted = d17O(NBS18_d18O_accepted, NBS18_Dp17O_accepted)
 
         # Calculate the scaling factors
         slope_d18O = (NBS18_d18O_accepted - IAEA603_d18O_accepted) / (NBS18_d18O_measured - IAEA603_d18O_measured)

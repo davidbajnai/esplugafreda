@@ -1,7 +1,9 @@
 # The following code is used to:
 # Compare carbonate and reconstructed soil-water isotope compositions
+# Compare pre-PETM minus CIE-body water differences with combined SD uncertainties
 #
 # INPUT:    replicate_data_scaled_averaged.csv
+#           replicate_data_scaled_averaged_Wostbrock.csv
 #           sample_info.csv
 #           Aron_2021.csv
 #           Kelson_2026_meteoric_water.csv
@@ -9,8 +11,8 @@
 #
 # OUTPUT:   carbonates_averaged_water.png
 #           carbonates_averaged_water.svg
-#           carbonates_averaged_water_theta_comparison.png
-#           carbonates_averaged_water_theta_comparison.svg
+#           theta_comparison.png
+#           theta_comparison.svg
 #           reconstructed_soil_water.csv
 #           reconstructed_water_averaged.csv
 #           reconstructed_water_averaged.xlsx
@@ -37,15 +39,15 @@ from reconstruct_water_Dp17O import reconstruct_water_Dp17O
 from pathlib import Path
 
 
-# Define relative file paths -------------------------------------------------
+# Define relative file paths ---------------------------------------------------
 figures_dir = Path(__file__).resolve().parent.parent / "figures"
 data_dir = Path(__file__).resolve().parent.parent / "data"
 
 
-# Load Data ------------------------------------------------------------------
+# Load Data --------------------------------------------------------------------
 def plot_calcite_equilibrium(
     water_dp17o: float, water_d18o: float, minimum_temperature: float,
-    ax: Axes, color: str = "k", model: str = "Hayles"
+    ax: Axes, color: str = "k", model: str = "Hayles", linestyle: str = ":"
 ) -> pd.DataFrame:
     water_d17o = d17O(water_d18o, water_dp17o)
 
@@ -58,7 +60,7 @@ def plot_calcite_equilibrium(
          equilibrium_temperatures]
     ).T
     ax.plot(prime(mineral_equilibrium[:, 0]), mineral_equilibrium[:, 1],
-            c = color, ls=":", zorder=0)
+            c = color, ls=linestyle, zorder=0)
 
     # Return equilibrium data as a dataframe
     equilibrium_df = pd.DataFrame(mineral_equilibrium)
@@ -102,6 +104,9 @@ def reconstructed_water_errors(row: pd.Series, model: str = "Hayles") -> pd.Seri
 
 
 df_carbonates = pd.read_csv(data_dir / "output" / "csv" / "replicate_data_scaled_averaged.csv")
+df_wostbrock = pd.read_csv(
+    data_dir / "output" / "csv" / "replicate_data_scaled_averaged_Wostbrock.csv"
+)
 df_sample_info = pd.read_csv(data_dir / "input" / "sample_info.csv")
 df_meteoric = pd.read_csv(data_dir / "input" / "water_data" / "Aron_2021.csv")
 df_kelson_meteoric = pd.read_csv(
@@ -220,91 +225,226 @@ df_water_guozhou["Dp17Ow"] = df_water_guozhou["period"].map(guozhou_groups.mean(
 df_water_guozhou["Dp17Ow_SD"] = df_water_guozhou["period"].map(guozhou_groups.std())
 water_models = {"Hayles": df_water, "GuoZhou": df_water_guozhou}
 
-# Apply plot style ------------------------------------------------------------
+# Pair the Wostbrock equation with its separately scaled carbonate measurements.
+# Retain the same independent IRMS isotope and clumped isotopes temperature data.
+df_wostbrock["sample_key"] = df_wostbrock["SampleName"].map(sample_key)
+df_wostbrock = df_wostbrock.merge(
+    df_sample_info, on="sample_key", how="left", validate="one_to_one"
+)
+df_wostbrock["period"] = np.where(
+    df_wostbrock["SampleName"].str.contains("ys", case=False, regex=False),
+    "PETM", "latest Paleocene",
+)
+df_wostbrock["reconstructed_water_d18O"] = (
+    (df_wostbrock["d18O"] + 1000) / a18_cc(df_wostbrock["temperature"] + 273.15) - 1000
+)
+df_wostbrock["reconstructed_water_Dp17O"] = reconstruct_water_Dp17O(
+    df_wostbrock["d18O"], df_wostbrock["Dp17O_AC"], df_wostbrock["temperature"],
+    model="Wostbrock",
+)
+water_models["Wostbrock"] = df_wostbrock.groupby("period", sort=False).agg(
+    d18Ow=("reconstructed_water_d18O", "mean"),
+    d18Ow_SD=("reconstructed_water_d18O", "std"),
+    Dp17Ow=("reconstructed_water_Dp17O", "mean"),
+    Dp17Ow_SD=("reconstructed_water_Dp17O", "std"),
+    temperature=("temperature", "mean"),
+).reset_index()
+
+# Apply plot style -------------------------------------------------------------
 apply_plot_style()
 
 
-for figure_name, models in (
-    ("carbonates_averaged_water", ("Hayles",)),
-    ("carbonates_averaged_water_theta_comparison", ("Hayles", "GuoZhou")),
-):
-    comparison = len(models) > 1
-    # Create figure ------------------------------------------------------------
-    fig, ax = plt.subplots(figsize=(3.5, 3.5))
+colors = {"PETM": C["cie_body"], "latest Paleocene": C["pre_petm"]}
+markers = {"PETM": "D", "latest Paleocene": "o"}
+period_labels = {"PETM": "CIE body", "latest Paleocene": "pre-PETM"}
+
+# Create figure ----------------------------------------------------------------
+# Main carbonate and reconstructed-water figure.
+fig, ax = plt.subplots(figsize=(3.5, 3.5))
 
 
-    # Setup axes -------------------------------------------------------------
-    setup_axes(fig)
-    ax.set_xlim(-23, 31)
-    ax.set_ylim(-160, 60)
-    ax.xaxis.set_major_locator(MultipleLocator(10))
-    ax.xaxis.set_minor_locator(MultipleLocator(5))
-    ax.yaxis.set_minor_locator(MultipleLocator(5))
+# Setup axes -------------------------------------------------------------------
+setup_axes(fig)
+ax.set_xlim(-23, 31)
+ax.set_ylim(-160, 60)
+ax.xaxis.set_major_locator(MultipleLocator(10))
+ax.xaxis.set_minor_locator(MultipleLocator(5))
+ax.yaxis.set_minor_locator(MultipleLocator(5))
 
 
-    ax.set_xlabel(r"$\delta\prime^{18}\mathrm{O}$ (‰ VSMOW)")
-    ax.set_ylabel(r"$\Delta\prime^{17}\mathrm{O}$ (ppm)")
+ax.set_xlabel(r"$\delta\prime^{18}\mathrm{O}$ (‰ VSMOW)")
+ax.set_ylabel(r"$\Delta\prime^{17}\mathrm{O}$ (ppm)")
 
 
-    # Plot data --------------------------------------------------------------
-    colors = {"PETM": C["cie_body"], "latest Paleocene": C["pre_petm"]}
-    markers = {"PETM": "D", "latest Paleocene": "o"}
-    period_labels = {"PETM": "CIE body", "latest Paleocene": "pre-PETM"}
-    carbonate_handles = {}
-    for _, row in df_carbonates.iterrows():
-        color = colors[row["period"]]
-        x = prime(row["d18O"])
-        bounds = prime(row["d18O"] + np.array([-row["δ18O_SE"], row["δ18O_SE"]]))
-        ax.errorbar(x, row["Dp17O_AC"], xerr=[[x-bounds[0]], [bounds[1]-x]],
-                    yerr = row["Dp17O_error"], fmt="none", ecolor=color, capsize=1.5, zorder=1)
-        period = row["period"]
-        carbonate_handles[period] = ax.scatter(
-            x, row["Dp17O_AC"], marker=markers[period], fc=color, ec="k", zorder=2, s=20,
-            label = f"carbonate, {period_labels[period]}",
-        )
-
-    # Plot the unweighted group means of the individual water reconstructions.
-    water_handles = {}
-    for model in models:
-        for _, row in water_models[model].iterrows():
-            period = row["period"]
-            color = colors[period]
-            xs = prime(row["d18Ow"] + np.array([-row["d18Ow_SD"], row["d18Ow_SD"]]))
-            ys = row["Dp17Ow"] + np.array([-row["Dp17Ow_SD"], row["Dp17Ow_SD"]])
-            ax.add_patch(Rectangle((xs.min(), ys.min()), np.ptp(xs), np.ptp(ys),
-                                   fc = color, ec=color, alpha=0.2, lw=0.6, zorder=1))
-            water_handles[(model, period)] = ax.scatter(
-                prime(row["d18Ow"]), row["Dp17Ow"],
-                marker = "*", fc=color, ec=C["red"] if model == "GuoZhou" else "k", zorder=3, s=50,
-                label = f"soil water, {period_labels[period]}" + (f" ({model})" if comparison else ""),
-            )
-            plot_calcite_equilibrium(row["Dp17Ow"], row["d18Ow"],
-                                    row["temperature"], ax, color=color, model=model)
-
-
-    meteoric_handle = ax.scatter(prime(df_meteoric["δ18O"]), df_meteoric["Dp17O"],
-               marker = "o", fc=C["modern_meteoric"], ec="none", s=10,
-               label = "modern meteoric waters")
-    soil_handle = ax.scatter(prime(df_kelson_soil["d18O.mean"]), df_kelson_soil["D17O_pmg"],
-               marker = "s", fc=C["modern_soil"], ec="none", s=10,
-               label = "modern soil waters")
-
-
-    # Add legend -------------------------------------------------------------
-    legend_handles = [meteoric_handle, soil_handle]
-    legend_handles.extend(carbonate_handles[period] for period in ("latest Paleocene", "PETM"))
-    for model in models:
-        legend_handles.extend(water_handles[(model, period)] for period in ("latest Paleocene", "PETM"))
-    add_standard_legend(
-        ax, handles=legend_handles, loc="lower left", fontsize=5 if comparison else 6, markerscale=1,
+# Plot data --------------------------------------------------------------------
+carbonate_handles = {}
+for _, row in df_carbonates.iterrows():
+    color = colors[row["period"]]
+    x = prime(row["d18O"])
+    bounds = prime(row["d18O"] + np.array([-row["δ18O_SE"], row["δ18O_SE"]]))
+    ax.errorbar(x, row["Dp17O_AC"], xerr=[[x-bounds[0]], [bounds[1]-x]],
+                yerr = row["Dp17O_error"], fmt="none", ecolor=color, capsize=1.5, zorder=1)
+    period = row["period"]
+    carbonate_handles[period] = ax.scatter(
+        x, row["Dp17O_AC"], marker=markers[period], fc=color, ec="k", zorder=2, s=20,
+        label = f"carbonate, {period_labels[period]}",
     )
 
 
-    save_figure(fig, figures_dir, figure_name)
+# Plot the unweighted group means of the individual water reconstructions.
+water_handles = {}
+for _, row in df_water.iterrows():
+    period = row["period"]
+    color = colors[period]
+    xs = prime(row["d18Ow"] + np.array([-row["d18Ow_SD"], row["d18Ow_SD"]]))
+    ys = row["Dp17Ow"] + np.array([-row["Dp17Ow_SD"], row["Dp17Ow_SD"]])
+    ax.add_patch(Rectangle((xs.min(), ys.min()), np.ptp(xs), np.ptp(ys),
+                           fc = color, ec=color, alpha=0.2, lw=0.6, zorder=1))
+    water_handles[period] = ax.scatter(
+        prime(row["d18Ow"]), row["Dp17Ow"],
+        marker = "*", fc=color, ec=C["black"], zorder=3, s=50,
+        label = f"soil water, {period_labels[period]}",
+    )
+    plot_calcite_equilibrium(row["Dp17Ow"], row["d18Ow"],
+                            row["temperature"], ax, color=color, model="Hayles",
+                            linestyle=":")
 
 
+meteoric_handle = ax.scatter(prime(df_meteoric["δ18O"]), df_meteoric["Dp17O"],
+           marker = "o", fc=C["modern_meteoric"], ec="none", s=10,
+           label = "modern meteoric waters")
+soil_handle = ax.scatter(prime(df_kelson_soil["d18O.mean"]), df_kelson_soil["D17O_pmg"],
+           marker = "s", fc=C["modern_soil"], ec="none", s=10,
+           label = "modern soil waters")
 
-# Create table --------------------------------------------------------------
+
+# Add legend -------------------------------------------------------------------
+legend_handles = [meteoric_handle, soil_handle]
+legend_handles.extend(carbonate_handles[period] for period in ("latest Paleocene", "PETM"))
+legend_handles.extend(water_handles[period] for period in ("latest Paleocene", "PETM"))
+add_standard_legend(
+    ax, handles=legend_handles, loc="lower left", fontsize=6,
+    markerscale=1,
+)
+
+
+save_figure(fig, figures_dir, "carbonates_averaged_water")
+
+
+# Create figure ----------------------------------------------------------------
+# Theta-model comparison figure.
+models = ("Hayles", "GuoZhou", "Wostbrock")
+fig, (ax, ax_difference) = plt.subplots(1, 2, figsize=(7, 3.5))
+
+
+# Setup axes -------------------------------------------------------------------
+setup_axes(fig)
+ax.xaxis.set_major_locator(MultipleLocator(10))
+ax.xaxis.set_minor_locator(MultipleLocator(5))
+ax.yaxis.set_minor_locator(MultipleLocator(5))
+
+
+ax.set_xlabel(r"$\delta\prime^{18}\mathrm{O}$ (‰ VSMOW)")
+ax.set_ylabel(r"$\Delta\prime^{17}\mathrm{O}$ (ppm)")
+ax_difference.set_xticks(range(len(models)), models)
+ax_difference.set_xlabel("Equilibrium relationship")
+ax_difference.set_ylabel(
+    r"Water $\Delta\prime^{17}\mathrm{O}$ difference (ppm)"
+    "\npre-PETM − CIE body (±1 SD)"
+)
+
+# Plot data --------------------------------------------------------------------
+model_edges = {"Hayles": C["black"], "GuoZhou": C["red"], "Wostbrock": C["blue"]}
+model_linestyles = {"Hayles": ":", "GuoZhou": "--", "Wostbrock": "-"}
+carbonate_handles = {}
+for _, row in df_carbonates.iterrows():
+    color = colors[row["period"]]
+    x = prime(row["d18O"])
+    bounds = prime(row["d18O"] + np.array([-row["δ18O_SE"], row["δ18O_SE"]]))
+    ax.errorbar(x, row["Dp17O_AC"], xerr=[[x-bounds[0]], [bounds[1]-x]],
+                yerr = row["Dp17O_error"], fmt="none", ecolor=color, capsize=1.5, zorder=1)
+    period = row["period"]
+    carbonate_handles[period] = ax.scatter(
+        x, row["Dp17O_AC"], marker=markers[period], fc=color, ec="k", zorder=2, s=20,
+        label = f"carbonate, {period_labels[period]} (Chaillot)",
+    )
+
+wostbrock_handles = {}
+for _, row in df_wostbrock.iterrows():
+    period = row["period"]
+    color = colors[period]
+    x = prime(row["d18O"])
+    bounds = prime(row["d18O"] + np.array([-row["δ18O_SE"], row["δ18O_SE"]]))
+    ax.errorbar(
+        x, row["Dp17O_AC"], xerr=[[x-bounds[0]], [bounds[1]-x]],
+        yerr=row["Dp17O_error"], fmt="none", ecolor=color, capsize=1.5, zorder=1,
+    )
+    wostbrock_handles[period] = ax.scatter(
+        x, row["Dp17O_AC"], marker=markers[period], fc="none", ec=color,
+        zorder=2, s=20, label=f"carbonate, {period_labels[period]} (Wostbrock)",
+    )
+
+# Plot the unweighted group means of the individual water reconstructions.
+water_handles = {}
+for model in models:
+    for _, row in water_models[model].iterrows():
+        period = row["period"]
+        color = colors[period]
+        xs = prime(row["d18Ow"] + np.array([-row["d18Ow_SD"], row["d18Ow_SD"]]))
+        ys = row["Dp17Ow"] + np.array([-row["Dp17Ow_SD"], row["Dp17Ow_SD"]])
+        ax.add_patch(Rectangle((xs.min(), ys.min()), np.ptp(xs), np.ptp(ys),
+                               fc = color, ec=color, alpha=0.2, lw=0.6, zorder=1))
+        water_handles[(model, period)] = ax.scatter(
+            prime(row["d18Ow"]), row["Dp17Ow"],
+            marker = "*", fc=color, ec=model_edges[model], zorder=3, s=50,
+            label = f"soil water, {period_labels[period]} ({model})",
+        )
+        plot_calcite_equilibrium(row["Dp17Ow"], row["d18Ow"],
+                                row["temperature"], ax, color=color, model=model,
+                                linestyle=model_linestyles[model])
+
+
+# Subtract period means in the stated order, using each model's scaling.
+water_differences = []
+water_difference_errors = []
+for model_index, model in enumerate(models):
+    period_water = water_models[model].set_index("period")
+    difference = period_water.loc["latest Paleocene", "Dp17Ow"] - period_water.loc["PETM", "Dp17Ow"]
+    # Combine the two period sample SDs in quadrature, assuming independence.
+    difference_sd = np.sqrt(
+        period_water.loc["latest Paleocene", "Dp17Ow_SD"]**2
+        + period_water.loc["PETM", "Dp17Ow_SD"]**2
+    )
+    water_differences.append(difference)
+    water_difference_errors.append(difference_sd)
+    ax_difference.errorbar(
+        model_index, difference, yerr=difference_sd, fmt="none",
+        ecolor=model_edges[model], capsize=3, zorder=1,
+    )
+    ax_difference.scatter(model_index, difference, color=model_edges[model], s=30)
+    ax_difference.annotate(
+        f"{difference:.1f} ± {difference_sd:.1f}".replace("-", "−"),
+        (model_index, difference + difference_sd),
+        xytext=(0, 7), textcoords="offset points", ha="center", va="bottom",
+    )
+ax_difference.margins(x=0.2, y=0.25)
+
+
+# Add legend -------------------------------------------------------------------
+legend_handles = []
+legend_handles.extend(carbonate_handles[period] for period in ("latest Paleocene", "PETM"))
+legend_handles.extend(wostbrock_handles[period] for period in ("latest Paleocene", "PETM"))
+for model in models:
+    legend_handles.extend(water_handles[(model, period)] for period in ("latest Paleocene", "PETM"))
+add_standard_legend(
+    ax, handles=legend_handles, loc="lower left", fontsize=5,
+    markerscale=1,
+)
+
+save_figure(fig, figures_dir, "theta_comparison")
+
+
+# Create table -----------------------------------------------------------------
 # Average repeated metadata records using the existing sample matching.
 df_table_metadata = pd.read_csv(data_dir / "input" / "sample_info.csv")
 df_table_metadata["sample_key"] = df_table_metadata["Sample code"].map(sample_key)
